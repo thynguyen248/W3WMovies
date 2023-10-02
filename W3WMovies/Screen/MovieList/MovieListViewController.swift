@@ -169,9 +169,8 @@ extension MovieListViewController: UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
-        guard let section = dataSource.sectionIdentifier(for: indexPath.section),
-              section.hasMoreData,
-              indexPath.row == section.items.count - 1 else {
+        let section = dataSource.snapshot().sectionIdentifiers[indexPath.section]
+        guard section.hasMoreData, indexPath.row == section.items.count - 1 else {
             return
         }
         loadMore.send(())
