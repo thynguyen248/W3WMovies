@@ -38,10 +38,7 @@ final class MovieDetailViewModel: ViewModelType {
         let movieDetailPublisher = Publishers.CombineLatest(input.isReachable.removeDuplicates(),
                                                             input.loadTrigger)
             .flatMap { [movieDetailUseCase, movieId] (isReachable, _) -> AnyPublisher<MovieModel, AppError> in
-                if isReachable {
-                    return movieDetailUseCase.getMovieDetail(movieId: movieId)
-                }
-                return Empty().eraseToAnyPublisher()
+                return movieDetailUseCase.getMovieDetail(isReachable: isReachable, movieId: movieId)
             }
             .asResult()
             .handleEvents(receiveOutput: { _ in

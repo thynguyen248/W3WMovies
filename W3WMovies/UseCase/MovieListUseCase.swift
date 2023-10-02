@@ -8,7 +8,7 @@
 import Combine
 
 protocol MovieListUseCaseInterface {
-    func getMovieList(page: Int) -> AnyPublisher<MovieResponseModel, AppError>
+    func getMovieList(isReachable: Bool, keyword: String, page: Int) -> AnyPublisher<MovieResponseModel, AppError>
 }
 
 final class MovieListUseCase: MovieListUseCaseInterface {
@@ -18,7 +18,7 @@ final class MovieListUseCase: MovieListUseCaseInterface {
         self.repository = repository
     }
     
-    func getMovieList(page: Int) -> AnyPublisher<MovieResponseModel, AppError> {
-        repository.getMovieList(page: page)
+    func getMovieList(isReachable: Bool, keyword: String, page: Int) -> AnyPublisher<MovieResponseModel, AppError> {
+        repository.getMovieList(isReachable: isReachable, keyword: keyword, page: page)
     }
 }

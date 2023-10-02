@@ -72,6 +72,7 @@ struct APIConstants {
 protocol APIClientInterface {
     func getMovieList(page: Int) -> AnyPublisher<MovieResponseModel, AppError>
     func getMovieDetail(movieId: Int) -> AnyPublisher<MovieModel, AppError>
+    func searchMovies(keyword: String, page: Int) -> AnyPublisher<MovieResponseModel, AppError>
 }
 
 final class APIClient: APIClientInterface {

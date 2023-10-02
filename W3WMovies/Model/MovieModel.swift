@@ -19,6 +19,7 @@ struct MovieModel: Decodable {
     let title: String?
     let overview: String?
     let voteAverage: Double?
+    let popularity: Double?
     let videos: VideoResponseModel?
     @DateWrapper var releaseDate: Date?
     

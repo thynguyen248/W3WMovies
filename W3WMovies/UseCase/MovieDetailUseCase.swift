@@ -8,7 +8,7 @@
 import Combine
 
 protocol MovieDetailUseCaseInterface {
-    func getMovieDetail(movieId: Int) -> AnyPublisher<MovieModel, AppError>
+    func getMovieDetail(isReachable: Bool, movieId: Int) -> AnyPublisher<MovieModel, AppError>
 }
 
 final class MovieDetailUseCase: MovieDetailUseCaseInterface {
@@ -18,7 +18,7 @@ final class MovieDetailUseCase: MovieDetailUseCaseInterface {
         self.repository = repository
     }
     
-    func getMovieDetail(movieId: Int) -> AnyPublisher<MovieModel, AppError> {
-        repository.getMovieDetail(movieId: movieId)
+    func getMovieDetail(isReachable: Bool, movieId: Int) -> AnyPublisher<MovieModel, AppError> {
+        repository.getMovieDetail(isReachable: isReachable, movieId: movieId)
     }
 }

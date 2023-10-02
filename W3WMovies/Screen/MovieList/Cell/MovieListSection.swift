@@ -11,21 +11,13 @@ enum MovieListSectionType: Int {
     case main
 }
 
-struct MovieListSection: Hashable {
+struct MovieListSection: DiffableItem {
     var sectionType: MovieListSectionType
     var items: [MovieListCellItem] = []
     var hasMoreData = false
     
     var identifier: String {
         return "\(sectionType.rawValue)"
-    }
-    
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(identifier)
-    }
-    
-    static func == (lhs: MovieListSection, rhs: MovieListSection) -> Bool {
-        return lhs.identifier == rhs.identifier
     }
 }
 
@@ -36,15 +28,21 @@ struct MovieListCellItem: DiffableItem {
     let title: String?
     let releaseDate: String?
     let voteAverage: String?
+    let popularity: Double?
 }
 
-extension MovieListCellItem {
+extension MovieListCellItem: Comparable {
     init(with movieModel: MovieModel, page: Int) {
         self.identifier = "\(movieModel.id) \(page)"
         self.movieId = movieModel.id
+        self.posterURL = movieModel.posterURL
         self.title = movieModel.title
         self.releaseDate = movieModel.releaseDate?.toString()
         self.voteAverage = String(format: "%.1f", (movieModel.voteAverage ?? 0.0))
-        self.posterURL = movieModel.posterURL
+        self.popularity = movieModel.popularity
+    }
+    
+    static func < (lhs: MovieListCellItem, rhs: MovieListCellItem) -> Bool {
+        return (lhs.popularity ?? 0.0) < (rhs.popularity ?? 0.0)
     }
 }

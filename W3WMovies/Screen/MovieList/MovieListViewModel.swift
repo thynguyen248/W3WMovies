@@ -22,16 +22,13 @@ final class MovieListViewModel: ViewModelType {
     }
     
     private let movieListUseCase: MovieListUseCaseInterface
-    private let searchMoviesUseCase: SearchMoviesUseCaseInterface
     
     private var sections: [MovieListSection] = []
     private var currentPage = 0
     private var currentSearchText = ""
     
-    init(movieListUseCase: MovieListUseCaseInterface = MovieListUseCase(),
-         searchMoviesUseCase: SearchMoviesUseCaseInterface = SearchMoviesUseCase()) {
+    init(movieListUseCase: MovieListUseCaseInterface = MovieListUseCase()) {
         self.movieListUseCase = movieListUseCase
-        self.searchMoviesUseCase = searchMoviesUseCase
         sections.append(MovieListSection(sectionType: .main))
     }
     
@@ -46,30 +43,21 @@ final class MovieListViewModel: ViewModelType {
                                                         input.loadMore)
             .flatMap { [weak self] (isReachable, searchText, _) -> AnyPublisher<MovieResponseModel, AppError> in
                 guard let self = self else { return Empty().eraseToAnyPublisher() }
-                if isReachable {
-                    if self.currentPage == 0 || searchText != self.currentSearchText {
-                        output.isLoading = true
-                        self.reset()
-                        self.currentSearchText = searchText
-                    }
-                    let targetPage = self.currentPage + 1
-                    
-                    // Search text is empty, perform loading trending movies
-                    if searchText.isEmpty {
-                        return self.movieListUseCase.getMovieList(page: targetPage)
-                    }
-                    // Perform searching
-                    return self.searchMoviesUseCase.searchMovies(keyword: searchText, page: targetPage)
+                if self.currentPage == 0 || searchText != self.currentSearchText {
+                    output.isLoading = true
+                    self.reset()
+                    self.currentSearchText = searchText
                 }
-                return Empty().eraseToAnyPublisher()
+                let targetPage = self.currentPage + 1
+                return self.movieListUseCase.getMovieList(isReachable: isReachable, keyword: searchText, page: targetPage)
             }
             .asResult()
             .handleEvents(receiveOutput: { _ in
                 output.isLoading = false
             })
+            .eraseToAnyPublisher()
             .receive(on: RunLoop.main)
             .share()
-            .eraseToAnyPublisher()
         
         moviesPublisher
             .map { [weak self] result -> [MovieListSection] in
@@ -91,22 +79,21 @@ final class MovieListViewModel: ViewModelType {
     
     private func reset() {
         currentPage = 0
-        handleMovieResponse(nil, sectionType: .main, reset: true)
+        for idx in sections.indices {
+            sections[idx].items.removeAll()
+        }
     }
     
-    private func handleMovieResponse(_ response: MovieResponseModel?, sectionType: MovieListSectionType, reset: Bool = false) {
-        guard let idx = sections.firstIndex(where: { $0.sectionType == sectionType }) else {
+    private func handleMovieResponse(_ response: MovieResponseModel?, sectionType: MovieListSectionType) {
+        guard let idx = sections.firstIndex(where: { $0.sectionType == sectionType }),
+              let models = response?.results, !models.isEmpty else {
             return
         }
-        let items = response?.results?.map {
-            MovieListCellItem(with: $0, page: response?.page ?? 0)
-        }
+        let items = models
+            .map { MovieListCellItem(with: $0, page: response?.page ?? 0) }
+            .sorted(by: >)
         var section = sections[idx]
-        if reset {
-            section.items.removeAll()
-        } else {
-            section.items += (items ?? [])
-        }
+        section.items += items
         section.hasMoreData = (response?.page ?? 0) < (response?.totalPages ?? 0)
         sections[idx] = section
         currentPage = response?.page ?? 0

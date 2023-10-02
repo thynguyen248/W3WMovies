@@ -8,27 +8,43 @@
 import Combine
 
 protocol MovieReposistoryInterface {
-    func getMovieList(page: Int) -> AnyPublisher<MovieResponseModel, AppError>
-    func getMovieDetail(movieId: Int) -> AnyPublisher<MovieModel, AppError>
-    func searchMovies(keyword: String, page: Int) -> AnyPublisher<MovieResponseModel, AppError>
+    func getMovieList(isReachable: Bool, keyword: String, page: Int) -> AnyPublisher<MovieResponseModel, AppError>
+    func getMovieDetail(isReachable: Bool, movieId: Int) -> AnyPublisher<MovieModel, AppError>
 }
 
 final class MovieReposistory: MovieReposistoryInterface {
-    private let apiClient: APIClient
+    private let apiClient: APIClientInterface
+    private let dbHandler: DBHandlerInterface
     
-    init(apiClient: APIClient = APIClient()) {
+    init(apiClient: APIClientInterface = APIClient(), dbHandler: DBHandlerInterface = CoreDataStack.shared) {
         self.apiClient = apiClient
+        self.dbHandler = dbHandler
     }
     
-    func getMovieList(page: Int) -> AnyPublisher<MovieResponseModel, AppError> {
-        return apiClient.getMovieList(page: page)
+    func getMovieList(isReachable: Bool, keyword: String, page: Int) -> AnyPublisher<MovieResponseModel, AppError> {
+        if isReachable {
+            return getRemoteMovieList(keyword: keyword, page: page)
+                .handleEvents(receiveOutput: { [weak self] response in
+                    self?.dbHandler.saveMovies(response.results ?? [], keyword: keyword, page: page)
+                })
+                .eraseToAnyPublisher()
+        }
+        return dbHandler.getMovies(keyword: keyword, page: page)
+            .map { MovieResponseModel(results: $0, page: page, totalPages: page + 1) }
+            .eraseToAnyPublisher()
     }
     
-    func getMovieDetail(movieId: Int) -> AnyPublisher<MovieModel, AppError> {
-        return apiClient.getMovieDetail(movieId: movieId)
-    }
-    
-    func searchMovies(keyword: String, page: Int) -> AnyPublisher<MovieResponseModel, AppError> {
+    func getRemoteMovieList(keyword: String, page: Int) -> AnyPublisher<MovieResponseModel, AppError> {
+        if keyword.isEmpty {
+            return apiClient.getMovieList(page: page)
+        }
         return apiClient.searchMovies(keyword: keyword, page: page)
+    }
+    
+    func getMovieDetail(isReachable: Bool, movieId: Int) -> AnyPublisher<MovieModel, AppError> {
+        if isReachable {
+            return apiClient.getMovieDetail(movieId: movieId)
+        }
+        return dbHandler.getMovieDetail(movieId: movieId)
     }
 }
