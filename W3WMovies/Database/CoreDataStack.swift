@@ -69,35 +69,12 @@ extension CoreDataStack {
         .eraseToAnyPublisher()
     }
     
-    func save<T: NSManagedObject>(objectType: T.Type, objects: [T]) -> AnyPublisher<Bool, AppError> {
-        return Future() { promise in
-            let context = objects.first?.managedObjectContext
-            context?.performAndWait {
-                if context?.hasChanges == true {
-                    do {
-                        try context?.save()
-                        promise(.success((true)))
-                    } catch {
-                        promise(.failure(AppError.dbInsertError(error.localizedDescription)))
-                    }
-                } else {
-                    promise(.success((false)))
-                }
-            }
-        }
-        .eraseToAnyPublisher()
-    }
-    
     func saveContext(_ context: NSManagedObjectContext) -> AnyPublisher<Bool, AppError> {
-        return Future() { [weak self] promise in
+        return Future() { promise in
             context.perform {
                 do {
                     try context.save()
-                    if context == self?.mainContext {
-                        promise(.success((true)))
-                    } else {
-                        try self?.mainContext.save()
-                    }
+                    promise(.success((true)))
                 } catch let error as NSError {
                     promise(.failure(AppError.dbInsertError(error.localizedDescription)))
                 }
