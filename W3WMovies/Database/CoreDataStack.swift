@@ -87,4 +87,22 @@ extension CoreDataStack {
         }
         .eraseToAnyPublisher()
     }
+    
+    func saveContext(_ context: NSManagedObjectContext) -> AnyPublisher<Bool, AppError> {
+        return Future() { [weak self] promise in
+            context.perform {
+                do {
+                    try context.save()
+                    if context == self?.mainContext {
+                        promise(.success((true)))
+                    } else {
+                        try self?.mainContext.save()
+                    }
+                } catch let error as NSError {
+                    promise(.failure(AppError.dbInsertError(error.localizedDescription)))
+                }
+            }
+        }
+        .eraseToAnyPublisher()
+    }
 }

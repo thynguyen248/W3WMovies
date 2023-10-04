@@ -2,7 +2,7 @@
 //  KeywordMO+CoreDataProperties.swift
 //  W3WMovies
 //
-//  Created by Thy Nguyen on 10/1/23.
+//  Created by Thy Nguyen on 10/3/23.
 //
 //
 
@@ -16,10 +16,10 @@ extension KeywordMO {
         return NSFetchRequest<KeywordMO>(entityName: "KeywordMO")
     }
 
+    @NSManaged public var identifier: String?
     @NSManaged public var keyword: String?
     @NSManaged public var page: Int64
-    @NSManaged public var identifier: String?
-    @NSManaged public var movies: NSSet?
+    @NSManaged public var movies: Set<MovieMO>?
 
 }
 
@@ -33,10 +33,10 @@ extension KeywordMO {
     @NSManaged public func removeFromMovies(_ value: MovieMO)
 
     @objc(addMovies:)
-    @NSManaged public func addToMovies(_ values: NSSet)
+    @NSManaged public func addToMovies(_ values: Set<MovieMO>)
 
     @objc(removeMovies:)
-    @NSManaged public func removeFromMovies(_ values: NSSet)
+    @NSManaged public func removeFromMovies(_ values: Set<MovieMO>)
 
 }
 

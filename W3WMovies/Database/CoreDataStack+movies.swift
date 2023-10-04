@@ -10,9 +10,7 @@ import Combine
 
 extension CoreDataStack: DBHandlerInterface {
     func getMovies(keyword: String, page: Int) -> AnyPublisher<[MovieModel], AppError> {
-        let predicate1 = NSPredicate(format: "ANY keywords.keyword = %@", keyword)
-        let predicate2 = NSPredicate(format: "ANY keywords.page = %@", "\(page)")
-        let predicate = NSCompoundPredicate.init(type: .and, subpredicates: [predicate1, predicate2])
+        let predicate = NSPredicate(format: "ANY keywords.keyword = %@ AND ANY keywords.page = %@", keyword, "\(page)")
         return fetch(objectType: MovieMO.self, predicate: predicate)
             .map { $0.map { $0.movieModel } }
             .eraseToAnyPublisher()
@@ -20,10 +18,10 @@ extension CoreDataStack: DBHandlerInterface {
     
     func saveMovies(_ movies: [MovieModel], keyword: String, page: Int) -> AnyPublisher<[MovieModel], AppError> {
         let context = newBackgroundContext
-        let newIds = Set(movies.map { $0.id })
+        let newIds = Set(movies.map { "\($0.id) \(page)" })
         
         /// Get existing keyword or insert new keyword
-        var currentKeywordMOs: [KeywordMO] = []
+        var currentKeywordMOs = Set<KeywordMO>()
         let keywordsRequest = NSFetchRequest<NSFetchRequestResult>(entityName: String(describing: KeywordMO.self))
         let keywordsPredicate: NSPredicate
         let keywordsPredicate1 = NSPredicate(format: "keyword = %@", keyword)
@@ -36,14 +34,13 @@ extension CoreDataStack: DBHandlerInterface {
         keywordsRequest.predicate = keywordsPredicate
         let existingKeywords = (try? context.fetch(keywordsRequest) as? [KeywordMO]) ?? []
         if !existingKeywords.isEmpty {
-            currentKeywordMOs = existingKeywords
+            currentKeywordMOs = Set(existingKeywords)
         } else {
             let keywordMO = KeywordMO(context: context)
             keywordMO.update(with: keyword, page: page)
-            try? context.save()
             let changes: [AnyHashable: Any] = [NSInsertedObjectsKey: [keywordMO.objectID]]
             NSManagedObjectContext.mergeChanges(fromRemoteContextSave: changes, into: [context])
-            currentKeywordMOs.append(keywordMO)
+            currentKeywordMOs.insert(keywordMO)
         }
         
         /// Update existing movie or insert new movie
@@ -61,19 +58,15 @@ extension CoreDataStack: DBHandlerInterface {
         
         // Update existing movies
         var objectsToUpdate = [NSManagedObjectID]()
-        existingMovieMOs?.forEach({ movieMO in
-            if newIds.contains(Int(movieMO.movieId)),
-                let movie = movies.first(where: { $0.id == movieMO.movieId }),
-               // Extra checking for duplicated movies in different pages
-                movieMO.identifier == "\(movie.id) \(page)" {
+        existingMovieMOs?.forEach { movieMO in
+            if newIds.contains(movieMO.identifier),
+               let movie = movies.first(where: { $0.id == movieMO.movieId }) {
                 movieMO.update(with: movie, page: page)
             } else {
-                currentKeywordMOs.forEach { keyword in
-                    movieMO.removeFromKeywords(keyword)
-                }
+                movieMO.removeFromKeywords(currentKeywordMOs)
             }
             objectsToUpdate.append(movieMO.objectID)
-        })
+        }
         if !objectsToUpdate.isEmpty {
             let changes: [AnyHashable: Any] = [NSUpdatedObjectsKey: objectsToUpdate]
             NSManagedObjectContext.mergeChanges(fromRemoteContextSave: changes, into: [context])
@@ -91,9 +84,9 @@ extension CoreDataStack: DBHandlerInterface {
         
         // Insert new movie
         var newMovieMOs: [MovieMO] = []
-        let oldIds = Set(existingMovieMOs?.compactMap { $0.movieId } ?? [])
+        let oldIds = Set(existingMovieMOs?.compactMap { $0.identifier } ?? [])
         movies.forEach { movie in
-            if !oldIds.contains(Int64(movie.id)) {
+            if !oldIds.contains("\(movie.id) \(page)") {
                 let movieMO = MovieMO(context: context)
                 movieMO.update(with: movie, page: page)
                 if let keyword = currentKeywordMOs.first(where: { $0.page == page }) {
@@ -103,7 +96,7 @@ extension CoreDataStack: DBHandlerInterface {
             }
         }
         
-        return save(objectType: MovieMO.self, objects: newMovieMOs)
+        return saveContext(context)
             .map { result in
                 return result ? movies : []
             }

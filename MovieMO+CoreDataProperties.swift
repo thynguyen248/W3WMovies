@@ -2,7 +2,7 @@
 //  MovieMO+CoreDataProperties.swift
 //  W3WMovies
 //
-//  Created by Thy Nguyen on 10/1/23.
+//  Created by Thy Nguyen on 10/3/23.
 //
 //
 
@@ -18,13 +18,13 @@ extension MovieMO {
 
     @NSManaged public var identifier: String
     @NSManaged public var movieId: Int64
-    @NSManaged public var title: String?
     @NSManaged public var overview: String?
-    @NSManaged public var voteAverage: Double
     @NSManaged public var popularity: Double
-    @NSManaged public var releaseDate: Date?
     @NSManaged public var posterPath: String?
+    @NSManaged public var releaseDate: Date?
+    @NSManaged public var title: String?
     @NSManaged public var videoKey: String?
+    @NSManaged public var voteAverage: Double
     @NSManaged public var keywords: Set<KeywordMO>?
 
 }
