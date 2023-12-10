@@ -38,8 +38,6 @@ extension CoreDataStack: DBHandlerInterface {
         } else {
             let keywordMO = KeywordMO(context: context)
             keywordMO.update(with: keyword, page: page)
-            let changes: [AnyHashable: Any] = [NSInsertedObjectsKey: [keywordMO.objectID]]
-            NSManagedObjectContext.mergeChanges(fromRemoteContextSave: changes, into: [context])
             currentKeywordMOs.insert(keywordMO)
         }
         
@@ -57,7 +55,6 @@ extension CoreDataStack: DBHandlerInterface {
         let existingMovieMOs = try? context.fetch(moviesRequest) as? [MovieMO]
         
         // Update existing movies
-        var objectsToUpdate = [NSManagedObjectID]()
         existingMovieMOs?.forEach { movieMO in
             if newIds.contains(movieMO.identifier),
                let movie = movies.first(where: { $0.id == movieMO.movieId }) {
@@ -65,21 +62,13 @@ extension CoreDataStack: DBHandlerInterface {
             } else {
                 movieMO.removeFromKeywords(currentKeywordMOs)
             }
-            objectsToUpdate.append(movieMO.objectID)
-        }
-        if !objectsToUpdate.isEmpty {
-            let changes: [AnyHashable: Any] = [NSUpdatedObjectsKey: objectsToUpdate]
-            NSManagedObjectContext.mergeChanges(fromRemoteContextSave: changes, into: [context])
         }
         
         // Delete movie that's not linked to any keyword
         let objectsToRemove = existingMovieMOs?.filter { $0.keywords?.isEmpty ?? true }.map { $0.objectID } ?? []
         if !objectsToRemove.isEmpty {
             let batchDeleteRequest = NSBatchDeleteRequest(objectIDs: objectsToRemove)
-            batchDeleteRequest.resultType = .resultTypeObjectIDs
-            let deleteResult = try? context.execute(batchDeleteRequest) as? NSBatchDeleteResult
-            let changes: [AnyHashable: Any] = [NSDeletedObjectsKey: deleteResult?.result as? [NSManagedObjectID] ?? []]
-            NSManagedObjectContext.mergeChanges(fromRemoteContextSave: changes, into: [context])
+            _ = try? context.execute(batchDeleteRequest)
         }
         
         // Insert new movie

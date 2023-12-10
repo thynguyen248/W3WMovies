@@ -94,7 +94,7 @@ final class MovieListViewController: UIViewController {
     }
     
     private func makeDataSource() -> DataSource {
-        let dataSource = UITableViewDiffableDataSource<MovieListSection, MovieListCellItem>(tableView: tableView) { (tableView, indexPath, cellItem) -> UITableViewCell? in
+        let dataSource = DataSource(tableView: tableView) { (tableView, indexPath, cellItem) -> UITableViewCell? in
             guard let cell = tableView.dequeueReusableCell(withIdentifier: MovieListTableViewCell.reuseIdentifier, for: indexPath) as? MovieListTableViewCell else {
                 fatalError("Can not dequeue cell")
             }
